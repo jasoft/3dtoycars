@@ -36,6 +36,7 @@ export interface GlassMaterialOptions {
   roughness?: number;
   transparent?: boolean;
   doubleSided?: boolean;
+  depthWrite?: boolean;
 }
 
 /**
@@ -53,6 +54,8 @@ export function createGlassMaterial(
     clearcoatRoughness: 0.04,
     opacity: options.opacity ?? (transparent ? 0.78 : 1.0),
     transparent,
+    // 透明车窗默认关闭深度写入，防止多块玻璃在相机旋转时互相深度排序闪烁
+    depthWrite: options.depthWrite ?? !transparent,
     side: options.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
   });
 }

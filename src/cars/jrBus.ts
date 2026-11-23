@@ -301,8 +301,9 @@ export function createJrBusCar(): CarObject {
   });
   const busGlassMat = createGlassMaterial({
     color: 0x0e131b,
-    opacity: 0.85,
+    opacity: 0.62,
     roughness: 0.05,
+    depthWrite: false,
   });
 
   // 1. 亮白下车身（带真实半圆轮拱镂空与前倾巴士鼻翼）
@@ -367,12 +368,12 @@ export function createJrBusCar(): CarObject {
     bodyGroup.add(decal);
   }
 
-  // 3. 客舱内部结构（过道地板、驾驶台与 7 排观光座椅，配合烟熏侧窗显露真实纵深）
+  // 3. 客舱内部结构（过道地板抬离 lowerBody 顶面 y=0.70 防止共面 Z-fighting）
   const floor = new THREE.Mesh(
-    new THREE.BoxGeometry(3.15, 0.04, 0.94),
+    new THREE.BoxGeometry(3.15, 0.02, 0.94),
     matteTrimMat,
   );
-  floor.position.set(-0.04, 0.68, 0);
+  floor.position.set(-0.04, 0.712, 0);
   bodyGroup.add(floor);
 
   const seatMat = new THREE.MeshStandardMaterial({
@@ -389,12 +390,12 @@ export function createJrBusCar(): CarObject {
     const sx = -1.32 + i * 0.39;
     for (const sz of [-0.27, 0.27]) {
       const seat = new THREE.Mesh(seatGeo, seatMat);
-      seat.position.set(sx, 0.80, sz);
+      seat.position.set(sx, 0.82, sz);
       seat.rotation.z = 0.08;
       bodyGroup.add(seat);
 
       const head = new THREE.Mesh(headGeo, headrestMat);
-      head.position.set(sx - 0.04, 0.93, sz);
+      head.position.set(sx - 0.04, 0.95, sz);
       bodyGroup.add(head);
     }
   }
@@ -402,15 +403,15 @@ export function createJrBusCar(): CarObject {
     new THREE.BoxGeometry(0.24, 0.16, 0.92),
     matteTrimMat,
   );
-  driverDash.position.set(1.38, 0.74, 0);
+  driverDash.position.set(1.38, 0.785, 0);
   bodyGroup.add(driverDash);
 
-  // 4. 整排连续深色观光侧窗与精致竖向立柱 + 亮黑窗框（保留中空客舱可见座椅）
+  // 4. 整排连续深色观光侧窗与精致竖向立柱 + 亮黑窗框（ceilingLiner 低于 roofMesh 底面 y=1.10 避免穿插闪烁）
   const ceilingLiner = new THREE.Mesh(
-    new THREE.BoxGeometry(3.22, 0.025, 1.02),
+    new THREE.BoxGeometry(3.18, 0.02, 0.98),
     matteTrimMat,
   );
-  ceilingLiner.position.set(-0.06, 1.115, 0);
+  ceilingLiner.position.set(-0.06, 1.088, 0);
   bodyGroup.add(ceilingLiner);
 
   const sideWinShape = new THREE.Shape();
@@ -421,22 +422,23 @@ export function createJrBusCar(): CarObject {
   sideWinShape.closePath();
 
   const sideWinGeo = new THREE.ExtrudeGeometry(sideWinShape, {
-    depth: 0.024,
+    depth: 0.012,
     bevelEnabled: false,
   });
-  sideWinGeo.translate(0, 0, -0.012);
+  sideWinGeo.translate(0, 0, -0.006);
 
-  const mullionGeo = new THREE.BoxGeometry(0.036, 0.445, 0.034);
-  const bottomBarGeo = new THREE.BoxGeometry(3.34, 0.042, 0.038);
-  const topBarGeo = new THREE.BoxGeometry(3.22, 0.042, 0.038);
+  const mullionGeo = new THREE.BoxGeometry(0.036, 0.445, 0.022);
+  const bottomBarGeo = new THREE.BoxGeometry(3.34, 0.042, 0.022);
+  const topBarGeo = new THREE.BoxGeometry(3.22, 0.042, 0.022);
   const mullionXs = [1.14, 0.68, 0.22, -0.24, -0.70, -1.16];
 
   for (const side of [-1, 1] as const) {
     const sideGlass = new THREE.Mesh(sideWinGeo, busGlassMat);
-    sideGlass.position.set(0, 0, side * 0.556);
+    sideGlass.position.set(0, 0, side * 0.542);
+    sideGlass.userData.noShadow = true;
     bodyGroup.add(sideGlass);
 
-    // 上下黑色窗框压条（与前倾 A 柱齐平）
+    // 上下黑色窗框压条（外表面位于玻璃外侧，零交叉）
     const bottomBar = new THREE.Mesh(bottomBarGeo, blackGlossMat);
     bottomBar.position.set(-0.03, 0.695, side * 0.562);
     bodyGroup.add(bottomBar);
@@ -448,7 +450,7 @@ export function createJrBusCar(): CarObject {
     // 竖向窗框立柱
     for (const mx of mullionXs) {
       const mullion = new THREE.Mesh(mullionGeo, blackGlossMat);
-      mullion.position.set(mx, 0.905, side * 0.563);
+      mullion.position.set(mx, 0.905, side * 0.562);
       bodyGroup.add(mullion);
     }
 
@@ -538,11 +540,12 @@ export function createJrBusCar(): CarObject {
 
   // 6. 大倾斜前挡风玻璃、雨刷与盛岡・仙台日文 LED 方向牌
   const frontGlass = new THREE.Mesh(
-    new THREE.BoxGeometry(0.025, 0.49, 1.06),
+    new THREE.BoxGeometry(0.025, 0.49, 1.03),
     busGlassMat,
   );
   frontGlass.position.set(1.59, 0.90, 0);
   frontGlass.rotation.z = 0.28;
+  frontGlass.userData.noShadow = true;
   bodyGroup.add(frontGlass);
 
   // 前风挡雨刷
@@ -564,9 +567,11 @@ export function createJrBusCar(): CarObject {
     emissive: new THREE.Color(0xffffff),
     emissiveIntensity: 0.75,
     roughness: 0.25,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
   });
   const frontSign = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.13), signMat);
-  frontSign.position.set(1.554, 1.08, 0);
+  frontSign.position.set(1.565, 1.08, 0);
   // 先绕自身 X 轴后仰、再绕 Y 轴朝向 +X，严格贴合前风挡倾角
   frontSign.rotation.order = 'YXZ';
   frontSign.rotation.y = Math.PI / 2;
@@ -627,6 +632,7 @@ export function createJrBusCar(): CarObject {
     busGlassMat,
   );
   rearGlass.position.set(-1.735, 0.94, 0);
+  rearGlass.userData.noShadow = true;
   bodyGroup.add(rearGlass);
 
   const rearSign = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.10), signMat);
