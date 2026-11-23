@@ -33,7 +33,7 @@ function bootstrap(): void {
   renderer.setPixelRatio(dpr);
   renderer.setSize(width, height);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.06;
+  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.domElement.className = 'scene-canvas';
@@ -76,9 +76,12 @@ function bootstrap(): void {
     env.busStopGroup,
   ];
 
+  let useBloom = false;
+
   // 应用初始灯光与 Bloom 参数
   const applyLighting = (mode: LightingMode): void => {
     const preset = env.setLightingMode(mode);
+    useBloom = preset.bloomStrength > 0.001;
     bloomPass.strength = preset.bloomStrength;
     bloomPass.radius = preset.bloomRadius;
     bloomPass.threshold = preset.bloomThreshold;
@@ -470,7 +473,11 @@ function bootstrap(): void {
       refreshHoverBadge();
     }
 
-    composer.render();
+    if (useBloom) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
   };
 
   animate();

@@ -43,40 +43,42 @@ interface ModeTargetState {
   deskClearcoatRoughness: number;
   roadTint: THREE.Color;
   roadRoughness: number;
+  vignetteOpacity: number;
   neonFactor: number;
   bloom: BloomPreset;
 }
 
 const MODE_CONFIGS: Record<LightingMode, ModeTargetState> = {
   desk: {
-    bgColor: new THREE.Color(0xe6ddd0),
-    fogColor: new THREE.Color(0xe6ddd0),
-    fogDensity: 0.022,
-    envIntensity: 0.78,
-    keyColor: new THREE.Color(0xfff1d8),
-    keyIntensity: 1.85,
-    keyPosition: new THREE.Vector3(6.2, 11.5, 7.2),
-    hemiSky: new THREE.Color(0xfff6e8),
-    hemiGround: new THREE.Color(0x6e4729),
-    hemiIntensity: 0.78,
+    bgColor: new THREE.Color(0xefe9df),
+    fogColor: new THREE.Color(0xefe9df),
+    fogDensity: 0,
+    envIntensity: 0.65,
+    keyColor: new THREE.Color(0xfff4e2),
+    keyIntensity: 2.25,
+    keyPosition: new THREE.Vector3(5.5, 10.8, 6.8),
+    hemiSky: new THREE.Color(0xfffaf2),
+    hemiGround: new THREE.Color(0x4a2c16),
+    hemiIntensity: 0.42,
     rimLeftColor: new THREE.Color(0xbce0ff),
-    rimLeftIntensity: 0.42,
+    rimLeftIntensity: 0.32,
     rimRightColor: new THREE.Color(0xffe7c2),
-    rimRightIntensity: 0.28,
+    rimRightIntensity: 0.22,
     deskColor: new THREE.Color(0xffffff),
-    deskRoughness: 0.68,
+    deskRoughness: 0.58,
     deskMetalness: 0.04,
-    deskClearcoat: 0.22,
-    deskClearcoatRoughness: 0.34,
-    roadTint: new THREE.Color(0xf2f4f8),
-    roadRoughness: 0.84,
+    deskClearcoat: 0.28,
+    deskClearcoatRoughness: 0.3,
+    roadTint: new THREE.Color(0xe5e9f0),
+    roadRoughness: 0.82,
+    vignetteOpacity: 0,
     neonFactor: 0,
-    bloom: { bloomStrength: 0.22, bloomRadius: 0.4, bloomThreshold: 1.28 },
+    bloom: { bloomStrength: 0, bloomRadius: 0, bloomThreshold: 2.0 },
   },
   neon: {
     bgColor: new THREE.Color(0x060914),
     fogColor: new THREE.Color(0x060914),
-    fogDensity: 0.036,
+    fogDensity: 0.032,
     envIntensity: 0.5,
     keyColor: new THREE.Color(0xc4d8ff),
     keyIntensity: 0.75,
@@ -96,20 +98,21 @@ const MODE_CONFIGS: Record<LightingMode, ModeTargetState> = {
     deskClearcoatRoughness: 0.12,
     roadTint: new THREE.Color(0x6c7890),
     roadRoughness: 0.72,
+    vignetteOpacity: 1,
     neonFactor: 1,
     bloom: { bloomStrength: 0.56, bloomRadius: 0.52, bloomThreshold: 1.08 },
   },
   studio: {
     bgColor: new THREE.Color(0xeef2f7),
     fogColor: new THREE.Color(0xeef2f7),
-    fogDensity: 0.017,
+    fogDensity: 0.004,
     envIntensity: 1.08,
     keyColor: new THREE.Color(0xffffff),
-    keyIntensity: 1.75,
+    keyIntensity: 1.85,
     keyPosition: new THREE.Vector3(4.5, 12.0, 6.5),
     hemiSky: new THREE.Color(0xffffff),
     hemiGround: new THREE.Color(0xcad3df),
-    hemiIntensity: 0.92,
+    hemiIntensity: 0.65,
     rimLeftColor: new THREE.Color(0xe6f1ff),
     rimLeftIntensity: 0.95,
     rimRightColor: new THREE.Color(0xfff7ed),
@@ -121,8 +124,9 @@ const MODE_CONFIGS: Record<LightingMode, ModeTargetState> = {
     deskClearcoatRoughness: 0.24,
     roadTint: new THREE.Color(0xf4f6fa),
     roadRoughness: 0.8,
+    vignetteOpacity: 0.45,
     neonFactor: 0,
-    bloom: { bloomStrength: 0.18, bloomRadius: 0.36, bloomThreshold: 1.35 },
+    bloom: { bloomStrength: 0, bloomRadius: 0, bloomThreshold: 2.0 },
   },
 };
 
@@ -840,7 +844,7 @@ export function createEnvironment(
   pmremGenerator.dispose();
   disposables.push(envRenderTarget);
 
-  // 2. 初始化场景背景与指数雾
+  // 2. 初始化场景背景与指数雾（默认桌面暖光彻底无雾）
   const initialMode = MODE_CONFIGS.desk;
   const bgColor = initialMode.bgColor.clone();
   const fog = new THREE.FogExp2(
@@ -848,7 +852,7 @@ export function createEnvironment(
     initialMode.fogDensity,
   );
   scene.background = bgColor;
-  scene.fog = fog;
+  scene.fog = initialMode.fogDensity > 0.0005 ? fog : null;
 
   // 3. 灯光系统（主方向光 + 半球光 + 左右轮廓补光）
   const keyLight = new THREE.DirectionalLight(
@@ -860,10 +864,11 @@ export function createEnvironment(
   keyLight.shadow.mapSize.set(2048, 2048);
   keyLight.shadow.camera.near = 1;
   keyLight.shadow.camera.far = 32;
-  keyLight.shadow.camera.left = -10;
-  keyLight.shadow.camera.right = 10;
-  keyLight.shadow.camera.top = 7;
-  keyLight.shadow.camera.bottom = -7;
+  keyLight.shadow.camera.left = -9;
+  keyLight.shadow.camera.right = 9;
+  keyLight.shadow.camera.top = 6;
+  keyLight.shadow.camera.bottom = -6;
+  keyLight.shadow.radius = 1.5;
   keyLight.shadow.bias = -0.0004;
   keyLight.shadow.normalBias = 0.025;
   scene.add(keyLight);
@@ -904,17 +909,18 @@ export function createEnvironment(
     clearcoat: initialMode.deskClearcoat,
     clearcoatRoughness: initialMode.deskClearcoatRoughness,
   });
-  const deskGeo = new THREE.BoxGeometry(36, 0.6, 26);
+  const deskGeo = new THREE.BoxGeometry(52, 0.8, 34);
   const deskMesh = new THREE.Mesh(deskGeo, deskMat);
-  deskMesh.position.set(0, -0.3, 0);
+  deskMesh.position.set(0, -0.4, 2);
   deskMesh.receiveShadow = true;
   scene.add(deskMesh);
 
-  // 外围椭圆柔和渐隐裙边：与背景色同步过渡，彻底消除桌面矩形远处切边
+  // 外围椭圆柔和渐隐裙边：仅在霓虹/影棚模式开启，桌面暖光模式下透明隐藏保证木纹锐利清晰
   const vignetteAlpha = createEdgeVignetteAlphaTexture();
   const vignetteMat = new THREE.MeshBasicMaterial({
     color: initialMode.bgColor.clone(),
     alphaMap: vignetteAlpha,
+    opacity: initialMode.vignetteOpacity,
     transparent: true,
     depthWrite: false,
     fog: false,
@@ -923,6 +929,7 @@ export function createEnvironment(
   vignetteGeo.rotateX(-Math.PI / 2);
   const vignetteMesh = new THREE.Mesh(vignetteGeo, vignetteMat);
   vignetteMesh.position.set(0, 0.002, 0);
+  vignetteMesh.visible = initialMode.vignetteOpacity > 0.005;
   scene.add(vignetteMesh);
 
   disposables.push(
@@ -1002,11 +1009,19 @@ export function createEnvironment(
     const target = MODE_CONFIGS[activeMode];
     const alpha = 1 - Math.exp(-6.5 * clampedDt);
 
-    // 平滑插值背景色、雾效、环境反射与各路灯光
+    // 平滑插值背景色、雾效、边缘渐隐、环境反射与各路灯光
     bgColor.lerp(target.bgColor, alpha);
     fog.color.lerp(target.fogColor, alpha);
     fog.density = THREE.MathUtils.lerp(fog.density, target.fogDensity, alpha);
+    scene.fog = fog.density > 0.0005 ? fog : null;
+
     vignetteMat.color.copy(bgColor);
+    vignetteMat.opacity = THREE.MathUtils.lerp(
+      vignetteMat.opacity,
+      target.vignetteOpacity,
+      alpha,
+    );
+    vignetteMesh.visible = vignetteMat.opacity > 0.005;
 
     scene.environmentIntensity = THREE.MathUtils.lerp(
       scene.environmentIntensity,
